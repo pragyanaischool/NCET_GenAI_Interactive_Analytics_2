@@ -12,18 +12,21 @@ User selected:
 - Hue: {hue}
 
 TASK:
-1. Generate pandas transformation (if needed)
-2. Suggest correct Plotly chart config
-3. Provide insights
+- Generate pandas transformation if needed
+- Suggest chart configuration
+- Generate insights
 
-RULES:
-- No imports
-- No matplotlib
-- Only pandas logic
+STRICT RULES:
+- Output ONLY valid JSON
+- Do NOT include explanation outside JSON
+- Do NOT use markdown (no ```json)
+- Response MUST start with {{ and end with }}
+- DO NOT use import
+- DO NOT use matplotlib or seaborn
 - DataFrame is df
-- Create result_df
+- MUST create result_df
 
-OUTPUT JSON:
+OUTPUT:
 
 {{
  "python_code": "...",
