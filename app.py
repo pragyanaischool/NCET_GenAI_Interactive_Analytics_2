@@ -1,10 +1,10 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import json
 
 from groq_llm import ask_llm
 from prompt_templates import build_prompt
+from utils import extract_json
 
 st.set_page_config(layout="wide")
 st.title("📊 GenAI Tableau-like Dashboard")
@@ -15,12 +15,12 @@ file = st.file_uploader("Upload CSV", type=["csv"])
 if file:
     df = pd.read_csv(file)
 
-    st.subheader("Dataset Preview")
+    st.subheader("📊 Dataset Preview")
     st.dataframe(df.head())
 
     columns = df.columns.tolist()
 
-    # ---------------- Controls ----------------
+    # ---------------- Sidebar Controls ----------------
     st.sidebar.header("📊 Chart Builder")
 
     chart_type = st.sidebar.selectbox(
@@ -32,9 +32,7 @@ if file:
     y = st.sidebar.selectbox("Y-axis", columns)
 
     hue = st.sidebar.selectbox("Hue / Color", ["None"] + columns)
-
-    if hue == "None":
-        hue = None
+    hue = None if hue == "None" else hue
 
     # ---------------- Generate Chart ----------------
     if st.button("Generate Chart"):
@@ -42,37 +40,52 @@ if file:
         prompt = build_prompt(chart_type, x, y, hue, columns)
         response = ask_llm(prompt)
 
-        try:
-            parsed = json.loads(response)
-        except:
-            st.error("LLM parsing failed")
-            st.write(response)
-            st.stop()
+        # ---------------- SAFE PARSING ----------------
+        parsed = extract_json(response)
 
-        result_df = df  # optional transformation
+        if parsed is None:
+            st.warning("⚠️ LLM parsing failed — using fallback")
 
-        # ---------------- Plot ----------------
+            parsed = {
+                "python_code": "result_df = df.head(20)",
+                "chart": {"type": chart_type, "x": x, "y": y, "color": hue},
+                "insights": "Fallback result shown due to parsing issue."
+            }
+
+        # ---------------- DATA ----------------
+        result_df = df.copy()
+
+        # ---------------- CHART ----------------
         try:
             if chart_type == "bar":
                 fig = px.bar(result_df, x=x, y=y, color=hue)
+
             elif chart_type == "line":
                 fig = px.line(result_df, x=x, y=y, color=hue)
+
             elif chart_type == "scatter":
                 fig = px.scatter(result_df, x=x, y=y, color=hue)
+
             elif chart_type == "pie":
                 fig = px.pie(result_df, names=x, values=y)
+
             elif chart_type == "histogram":
                 fig = px.histogram(result_df, x=x)
+
             elif chart_type == "box":
                 fig = px.box(result_df, x=x, y=y)
 
+            st.subheader("📊 Visualization")
             st.plotly_chart(fig, use_container_width=True)
 
         except Exception as e:
-            st.error(f"Chart error: {e}")
+            st.error(f"❌ Chart error: {e}")
 
-        # ---------------- Insights ----------------
-        st.subheader("🧠 Insights")
+        # ---------------- INSIGHTS ----------------
+        if st.button("🧠 Generate Insights"):
+            st.subheader("💡 Insights")
+            st.write(parsed.get("insights", "No insights available"))
 
-        if st.button("Generate Insights"):
-            st.write(parsed["insights"])
+        # ---------------- DEBUG ----------------
+        with st.expander("🔍 Debug (LLM Response)"):
+            st.text(response)
