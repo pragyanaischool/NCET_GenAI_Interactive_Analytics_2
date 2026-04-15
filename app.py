@@ -7,21 +7,21 @@ from prompt_templates import build_prompt
 from utils import extract_json
 
 st.set_page_config(layout="wide")
-st.title("📊 GenAI Tableau-like Dashboard")
-
+st.title("PragyanAI GenAI Tableau-like Dashboard")
+st.image()
 # ---------------- Upload ----------------
 file = st.file_uploader("Upload CSV", type=["csv"])
 
 if file:
     df = pd.read_csv(file)
 
-    st.subheader("📊 Dataset Preview")
+    st.subheader("Dataset Preview")
     st.dataframe(df.head())
 
     columns = df.columns.tolist()
 
     # ---------------- Sidebar Controls ----------------
-    st.sidebar.header("📊 Chart Builder")
+    st.sidebar.header("Chart Builder")
 
     chart_type = st.sidebar.selectbox(
         "Chart Type",
@@ -44,7 +44,7 @@ if file:
         parsed = extract_json(response)
 
         if parsed is None:
-            st.warning("⚠️ LLM parsing failed — using fallback")
+            st.warning("LLM parsing failed — using fallback")
 
             parsed = {
                 "python_code": "result_df = df.head(20)",
@@ -75,17 +75,17 @@ if file:
             elif chart_type == "box":
                 fig = px.box(result_df, x=x, y=y)
 
-            st.subheader("📊 Visualization")
+            st.subheader("Visualization")
             st.plotly_chart(fig, use_container_width=True)
 
         except Exception as e:
-            st.error(f"❌ Chart error: {e}")
+            st.error(f" Chart error: {e}")
 
         # ---------------- INSIGHTS ----------------
-        if st.button("🧠 Generate Insights"):
-            st.subheader("💡 Insights")
+        if st.button(" Generate Insights"):
+            st.subheader("Insights")
             st.write(parsed.get("insights", "No insights available"))
 
         # ---------------- DEBUG ----------------
-        with st.expander("🔍 Debug (LLM Response)"):
+        with st.expander("Debug (LLM Response)"):
             st.text(response)
