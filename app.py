@@ -14,6 +14,9 @@ st.image('PragyanAI_Transperent.png')
 if "dashboard_charts" not in st.session_state:
     st.session_state.dashboard_charts = []
 
+if "last_chart" not in st.session_state:
+    st.session_state.last_chart = None
+
 # ---------------- Upload ----------------
 file = st.file_uploader("Upload CSV", type=["csv"])
 
@@ -83,18 +86,16 @@ if file:
             st.subheader("Visualization")
             st.plotly_chart(fig, use_container_width=True)
 
-        except Exception as e:
-            st.error(f" Chart error: {e}")
-
-        # ---------------- ADD TO DASHBOARD ----------------
-        if st.button("➕ Add to Dashboard"):
-            st.session_state.dashboard_charts.append({
+            # 🔥 STORE LAST CHART (KEY FIX)
+            st.session_state.last_chart = {
                 "type": chart_type,
                 "x": x,
                 "y": y,
                 "color": hue
-            })
-            st.success("Added to dashboard!")
+            }
+
+        except Exception as e:
+            st.error(f" Chart error: {e}")
 
         # ---------------- INSIGHTS ----------------
         if st.button(" Generate Insights"):
@@ -187,86 +188,99 @@ if file:
         with st.expander("Debug (LLM Response)"):
             st.text(response)
 
-# ================== DASHBOARD SECTION ==================
+    # ---------------- ADD TO DASHBOARD ----------------
+    if st.session_state.last_chart is not None:
 
-st.sidebar.markdown("---")
-st.sidebar.subheader("📊 Dashboard")
+        if st.button("➕ Add Last Chart to Dashboard"):
+            st.session_state.dashboard_charts.append(
+                st.session_state.last_chart
+            )
+            st.success("Added to dashboard!")
 
-if st.sidebar.button("📊 View Dashboard"):
+    # ================== DASHBOARD SECTION ==================
 
-    st.header("📊 Dashboard View")
+    st.sidebar.markdown("---")
+    st.sidebar.subheader(" Dashboard")
 
-    charts = st.session_state.get("dashboard_charts", [])
+    if st.sidebar.button(" View Dashboard"):
 
-    if not charts:
-        st.info("No charts added yet.")
-    else:
+        st.header(" Dashboard View")
 
-        for i, chart in enumerate(charts):
+        charts = st.session_state.dashboard_charts
 
-            st.subheader(f"Chart {i+1}")
+        if not charts:
+            st.info("No charts added yet.")
+        else:
 
-            try:
-                x = chart["x"]
-                y = chart["y"]
-                chart_type = chart["type"]
-                color = chart.get("color")
+            for i, chart in enumerate(charts):
 
-                if chart_type == "bar":
-                    fig = px.bar(df, x=x, y=y, color=color)
+                st.subheader(f"Chart {i+1}")
 
-                elif chart_type == "line":
-                    fig = px.line(df, x=x, y=y, color=color)
+                try:
+                    x = chart["x"]
+                    y = chart["y"]
+                    chart_type = chart["type"]
+                    color = chart.get("color")
 
-                elif chart_type == "scatter":
-                    fig = px.scatter(df, x=x, y=y, color=color)
+                    if chart_type == "bar":
+                        fig = px.bar(df, x=x, y=y, color=color)
 
-                elif chart_type == "pie":
-                    fig = px.pie(df, names=x, values=y)
+                    elif chart_type == "line":
+                        fig = px.line(df, x=x, y=y, color=color)
 
-                elif chart_type == "histogram":
-                    fig = px.histogram(df, x=x)
+                    elif chart_type == "scatter":
+                        fig = px.scatter(df, x=x, y=y, color=color)
 
-                elif chart_type == "box":
-                    fig = px.box(df, x=x, y=y)
+                    elif chart_type == "pie":
+                        fig = px.pie(df, names=x, values=y)
 
-                else:
-                    fig = px.bar(df, x=x, y=y)
+                    elif chart_type == "histogram":
+                        fig = px.histogram(df, x=x)
 
-                st.plotly_chart(fig, use_container_width=True)
+                    elif chart_type == "box":
+                        fig = px.box(df, x=x, y=y)
 
-            except Exception as e:
-                st.error(f"Chart error: {e}")
+                    else:
+                        fig = px.bar(df, x=x, y=y)
 
-        # ---------------- DASHBOARD INSIGHTS ----------------
-        if st.button("🧠 Generate Dashboard Insights"):
+                    st.plotly_chart(fig, use_container_width=True)
 
-            st.subheader("📊 Dashboard Insights")
+                except Exception as e:
+                    st.error(f"Chart error: {e}")
 
-            chart_summary = "\n".join([
-                f"{c['type']} chart with X={c['x']} and Y={c['y']}"
-                for c in charts
-            ])
+            # ---------------- DASHBOARD INSIGHTS ----------------
+            if st.button(" Generate Dashboard Insights"):
 
-            prompt = f"""
-            You are a BI expert.
+                st.subheader("📊 Dashboard Insights")
 
-            Charts in dashboard:
-            {chart_summary}
+                chart_summary = "\n".join([
+                    f"{c['type']} chart with X={c['x']} and Y={c['y']}"
+                    for c in charts
+                ])
 
-            Dataset columns: {df.columns.tolist()}
+                prompt = f"""
+                You are a BI expert.
 
-            TASK:
-            - Summarize overall insights
-            - Identify trends
-            - Highlight patterns
-            - Suggest business actions
+                Charts in dashboard:
+                {chart_summary}
 
-            Output simple text.
-            """
+                Dataset columns: {df.columns.tolist()}
 
-            try:
-                response = ask_llm(prompt)
-                st.write(response)
-            except:
-                st.warning("Insight generation failed")
+                TASK:
+                - Summarize overall insights
+                - Identify trends
+                - Highlight patterns
+                - Suggest business actions
+
+                Output simple text.
+                """
+
+                try:
+                    response = ask_llm(prompt)
+                    st.write(response)
+                except:
+                    st.warning("Insight generation failed")
+
+    # ---------------- DEBUG DASHBOARD ----------------
+    with st.expander(" Dashboard Debug"):
+        st.write(st.session_state.dashboard_charts)
