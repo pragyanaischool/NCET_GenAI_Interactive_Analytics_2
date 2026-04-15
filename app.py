@@ -8,7 +8,7 @@ from utils import extract_json
 
 st.set_page_config(layout="wide")
 st.title("PragyanAI GenAI Tableau-like Dashboard")
-st.image()
+st.image('PragyanAI_Transperent.png')
 # ---------------- Upload ----------------
 file = st.file_uploader("Upload CSV", type=["csv"])
 
